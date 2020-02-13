@@ -5,6 +5,9 @@ window.addEventListener('load', function() {
     window.addEventListener('mousemove', function() {
         race.setMousePosition(event);
     });
+    window.addEventListener('resize', function() {
+        race.setCanvasSize();
+    });
 });
 
 /**
@@ -66,6 +69,10 @@ class Race {
     setMousePosition(e) {
         this.mousePosition.x = e.clientX - this.boundingRectangle.left;
         this.mousePosition.y = e.clientY - this.boundingRectangle.top;
+    }
+    setCanvasSize() {
+        this.canvas.width  = window.innerWidth;
+        this.canvas.height = window.innerHeight;
     }
 }
 
