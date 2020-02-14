@@ -27,12 +27,13 @@ interface XYCoordinates {
  * Racing event
  */
 class Race {
-    canvas: HTMLCanvasElement;
-    context: CanvasRenderingContext2D;
-    boundingRectangle: DOMRect;
-    interval: number;
-    mousePosition: XYCoordinates;
-    car: Car;
+    private _canvas: HTMLCanvasElement;
+    private _context: CanvasRenderingContext2D;
+    private _boundingRectangle: DOMRect;
+    private _interval: number;
+    private _mousePosition: XYCoordinates;
+    private _car: Car;
+    private _track: Track;
 
     /**
      * Creates an instance of race.
@@ -41,38 +42,85 @@ class Race {
      */
     constructor(canvasID: string = "gameArea", updateInterval: number = 20) {
         let canvas = document.getElementById(canvasID) as HTMLCanvasElement;
-        let context = canvas.getContext("2d");
         canvas.width  = window.innerWidth;
         canvas.height = window.innerHeight;
-
-        this.canvas = canvas;
-        this.context = context;
-        this.boundingRectangle = this.canvas.getBoundingClientRect();
-        this.interval = updateInterval;
-        this.mousePosition = {
-            x : 100,
-            y : 100
-        };
-        this.car = new Car(this, "img/car.png", "20px", "42px");
+        this._canvas = canvas;
+        let context = canvas.getContext("2d");
+        this._context = context;
+        
+        this._boundingRectangle = this._canvas.getBoundingClientRect();
+        this._interval = updateInterval;
+        this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
+        let carPosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
+        this._car = new Car(this, "img/car.png", "20px", "42px", carPosition);
+        this._track = new Track(this, "img/indianapolis.png", "1189px", "605px");
         this.start();
     }
 
-    start() {
-        setInterval(this.update.bind(this), this.interval);
+    get canvas() {
+        return this._canvas;
     }
-    
-    update() {
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        this.car.update();
+    get mousePosition() {
+        return this._mousePosition;
+    }
+
+    start() {
+        setInterval(this.updateCanvas.bind(this), this._interval);
+    }
+    updateCanvas() {
+        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+        this._car.update();
+        this._track.update(this._car);
+        this._track.draw();
+        this._car.draw();
     }
 
     setMousePosition(e) {
-        this.mousePosition.x = e.clientX - this.boundingRectangle.left;
-        this.mousePosition.y = e.clientY - this.boundingRectangle.top;
+        this._mousePosition.x = e.clientX - this._boundingRectangle.left;
+        this._mousePosition.y = e.clientY - this._boundingRectangle.top;
     }
     setCanvasSize() {
-        this.canvas.width  = window.innerWidth;
-        this.canvas.height = window.innerHeight;
+        this._canvas.width  = window.innerWidth;
+        this._canvas.height = window.innerHeight;
+        this._car.position = { x: this._canvas.width / 2, y: this._canvas.height / 2 };
+    }
+}
+
+/**
+ * Racing track
+ */
+class Track {
+    private _img: HTMLImageElement;
+    private _position: XYCoordinates;
+    private _ctx: CanvasRenderingContext2D;
+
+    constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, startPosition: XYCoordinates = { x: 0, y: 0 }) {
+        let img = document.createElement("IMG") as HTMLImageElement;
+        this._img = img;
+        this._img.setAttribute("src", imageSource);
+        this._img.setAttribute("width", imageWidth);
+        this._img.setAttribute("height", imageHeight);
+        this._img.setAttribute('crossOrigin', '');
+        
+        this._position = {
+            x : startPosition.x,
+            y : startPosition.y
+        };
+
+        this._ctx = race.canvas.getContext("2d");
+        this._ctx.save();
+    }
+    
+    update(car: Car) {
+        let carSpeed = car.speed;
+        this._position.x -= carSpeed.x
+        this._position.y -= carSpeed.y;
+    }
+    draw() {
+        // this.ctx.save();
+        this._ctx.drawImage(this._img, this._position.x, this._position.y);
+        // this.ctx.restore();
     }
 }
 
@@ -80,12 +128,12 @@ class Race {
  * Racing car
  */
 class Car {
-    img: HTMLImageElement;
-    mousePosition: XYCoordinates;
-    position: XYCoordinates;
-    speed: XYCoordinates;
-    azimuth: number;
-    ctx: CanvasRenderingContext2D;
+    private _img: HTMLImageElement;
+    private _mousePosition: XYCoordinates;
+    private _position: XYCoordinates;
+    private _speed: XYCoordinates;
+    private _azimuth: number;
+    private _ctx: CanvasRenderingContext2D;
 
     /**
      * Creates an instance of car.
@@ -96,48 +144,46 @@ class Car {
      * @param [startPositionX] 
      * @param [startPositionY] 
      */
-    constructor(race: Race, imageSource: string, imageWidth, imageHeight, startPositionX = 0, startPositionY = 0) {
+    constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, startPosition: XYCoordinates) {
         let img = document.createElement("IMG") as HTMLImageElement;
-        this.img = img;
-        this.img.setAttribute("src", imageSource);
-        this.img.setAttribute("width", imageWidth);
-        this.img.setAttribute("height", imageHeight);
-        this.img.setAttribute('crossOrigin', '');
+        this._img = img;
+        this._img.setAttribute("src", imageSource);
+        this._img.setAttribute("width", imageWidth);
+        this._img.setAttribute("height", imageHeight);
+        this._img.setAttribute('crossOrigin', '');
         
-        this.mousePosition = race.mousePosition;
-        this.position = {
-            x : startPositionX,
-            y : startPositionY
-        };
-        this.speed = {
-            x : 0,
-            y : 0
-        };
-        this.azimuth = 0;
+        this._mousePosition = race.mousePosition;
+        this._position = startPosition;
+        this._speed = { x: 0, y: 0 };
+        this._azimuth = 0;
 
-        this.ctx = race.canvas.getContext("2d");
-        this.ctx.save();
+        this._ctx = race.canvas.getContext("2d");
+        this._ctx.save();
     }
+
+    get speed() {
+        return this._speed;
+    }
+    set position(newPosition: XYCoordinates) {
+        this._position = newPosition;
+    }    
     
     update() {
-        this.newPosition();
+        this.newSpeed();
+        this.newAzimuth();
     }
 	newSpeed() {
-		this.speed.x = ((this.mousePosition.x - this.position.x)/20 + this.speed.x)/2;
-		this.speed.y = ((this.mousePosition.y - this.position.y)/20 + this.speed.y)/2;
-	}
-    newAzimuth() {
-        this.azimuth = Math.atan2(this.position.y - this.mousePosition.y, this.position.x - this.mousePosition.x) + Math.PI / 2;
+		this._speed.x = ((this._mousePosition.x - this._position.x)/20 + this._speed.x)/2;
+		this._speed.y = ((this._mousePosition.y - this._position.y)/20 + this._speed.y)/2;
     }
-    newPosition() {
-		this.newSpeed();
-        this.position.x += this.speed.x;
-        this.position.y += this.speed.y;
-        this.newAzimuth();
-        this.ctx.save();
-        this.ctx.translate(this.position.x, this.position.y);
-        this.ctx.rotate(this.azimuth);
-        this.ctx.drawImage(this.img,-10,-21);
-        this.ctx.restore();
+    newAzimuth() {
+        this._azimuth = Math.atan2(this._position.y - this._mousePosition.y, this._position.x - this._mousePosition.x) + Math.PI / 2;
+    }
+    draw() {
+        this._ctx.save();
+        this._ctx.translate(this._position.x, this._position.y);
+        this._ctx.rotate(this._azimuth);
+        this._ctx.drawImage(this._img,-10,-21);
+        this._ctx.restore();
     }
 }
