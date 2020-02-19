@@ -53,7 +53,7 @@ class Race {
         this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
         let carPosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
         this._car = new Car(this, "img/car.png", "20px", "42px", carPosition);
-        this._track = new Track(this, "img/indianapolis.png", "1189px", "605px");
+        this._track = new Track(this, "img/indianapolis.png", "11890px", "6050px", { x: -4900, y: -3880 });
         this.start();
     }
 
@@ -73,7 +73,16 @@ class Race {
         this._car.update();
         this._track.update(this._car);
         this._track.draw();
+        this.readCanvasValue();
         this._car.draw();
+    }
+    readCanvasValue() {
+        let carFrontCoords: XYCoordinates = { x: this._car.position.x + this._car.halfSize.y * Math.cos(this._car.azimuth + Math.PI / 2), y: this._car.position.y + this._car.halfSize.y * Math.sin(this._car.azimuth + Math.PI / 2)};
+        let leftImgData = this._context.getImageData(carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth), 1, 1)
+        this._context.font = "30px Arial";
+        this._context.fillText(leftImgData.data.toString(), 10, 50);
+        let rightImgData = this._context.getImageData(carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI), 1, 1)
+        this._context.fillText(rightImgData.data.toString(), 10, 100);
     }
 
     setMousePosition(e) {
@@ -129,6 +138,7 @@ class Track {
  */
 class Car {
     private _img: HTMLImageElement;
+    private _halfSize: XYCoordinates;
     private _mousePosition: XYCoordinates;
     private _position: XYCoordinates;
     private _speed: XYCoordinates;
@@ -152,6 +162,7 @@ class Car {
         this._img.setAttribute("height", imageHeight);
         this._img.setAttribute('crossOrigin', '');
         
+        this._halfSize = { x: this._img.width / 2, y: this._img.height / 2};
         this._mousePosition = race.mousePosition;
         this._position = startPosition;
         this._speed = { x: 0, y: 0 };
@@ -166,7 +177,16 @@ class Car {
     }
     set position(newPosition: XYCoordinates) {
         this._position = newPosition;
-    }    
+    }
+    get position() {
+        return this._position;
+    }
+    get azimuth() {
+        return this._azimuth;
+    }
+    get halfSize() {
+        return this._halfSize;
+    }
     
     update() {
         this.newSpeed();
@@ -179,11 +199,12 @@ class Car {
     newAzimuth() {
         this._azimuth = Math.atan2(this._position.y - this._mousePosition.y, this._position.x - this._mousePosition.x) + Math.PI / 2;
     }
+
     draw() {
         this._ctx.save();
         this._ctx.translate(this._position.x, this._position.y);
         this._ctx.rotate(this._azimuth);
-        this._ctx.drawImage(this._img,-10,-21);
+        this._ctx.drawImage(this._img,-this._halfSize.x,-this._halfSize.y);
         this._ctx.restore();
     }
 }
