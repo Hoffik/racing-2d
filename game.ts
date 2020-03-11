@@ -57,7 +57,7 @@ class Race {
         this._car = new Car(this, "img/car.png", "20px", "42px", carPosition);
         this._track = new Track(this, "img/indianapolis.png", "11890px", "6050px", { x: -4900, y: -3880 });
         this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 50);
-        this.start();
+        this.startRace();
     }
 
     get canvas() {
@@ -67,31 +67,35 @@ class Race {
         return this._mousePosition;
     }
 
-    start() {
+    startRace() {
         this._id = setInterval(this.updateCanvas.bind(this), this._interval);
-        // let spriteSheet = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 50);
-        // spriteSheet.animate();
     }
     updateCanvas() {
-        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this.updatePositions();
+        // 1 calculateCollision - 1 draw track support layer, 2 read canvas
+        // 2 updateCanvas - 1 clearRect, 2 draw track visible layer, 3 draw car
 
+        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this._track.draw();
+        this.readCanvas();
+        this._car.draw();
+    }
+    updatePositions() {
         this._car.update();
         this._track.update(this._car);
-        this._track.draw();
-        this.readCanvasValue();
-        this._car.draw();
-        // this._explosion.animate();
     }
-    readCanvasValue() {
+    readCanvas() {
         let carFrontCoords: XYCoordinates = { x: this._car.position.x + this._car.halfSize.y * Math.cos(this._car.azimuth + Math.PI / 2), y: this._car.position.y + this._car.halfSize.y * Math.sin(this._car.azimuth + Math.PI / 2)};
-        let leftImgData = this._context.getImageData(carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth), 1, 1)
-        this._context.font = "30px Arial";
-        this._context.fillText(leftImgData.data.toString(), 10, 50);
-        let rightImgData = this._context.getImageData(carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI), 1, 1)
-        this._context.fillText(rightImgData.data.toString(), 10, 100);
-        if (leftImgData.data.toString() == "255,0,0,255" || rightImgData.data.toString() == "255,0,0,255") {
+        let carFrontLeftCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth) };
+        let carFrontRightCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI) };
+        let leftImgData = this._context.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
+        let rightImgData = this._context.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
+        if (leftImgData.data.toString() == "255,0,0,255") {
             clearInterval(this._id);
-            this._explosion.animate();
+            this._explosion.animate(carFrontLeftCoords);
+        } else if (rightImgData.data.toString() == "255,0,0,255") {
+            clearInterval(this._id);
+            this._explosion.animate(carFrontRightCoords);
         }
     }
 
@@ -224,7 +228,6 @@ class SpriteSheet {
     private _img: HTMLImageElement;
     private _frameWidth: number;
     private _frameCount: number;
-    private _currentFrame: number;
     private _interval: number;
     private _ctx: CanvasRenderingContext2D;
 
@@ -238,29 +241,24 @@ class SpriteSheet {
 
         this._frameWidth = frameWidth;
         this._frameCount = parseInt(imageWidth) / parseInt(imageHeight);
-        this._currentFrame = 0;
         this._interval = interval;
 
         this._ctx = race.canvas.getContext("2d");
         this._ctx.save();
     }
 
-    animate() {
-        console.log("animate");
-        // this._ctx.save();
-        // this._ctx.drawImage(this._img, 0, 0);
-        this._ctx.drawImage(this._img, 10 * this._frameWidth, 0, this._frameWidth, this._img.height, 0, 0, this._frameWidth, this._img.height);
-        // this._ctx.restore();
-        // for (this._currentFrame; this._currentFrame < this._frameCount; this._currentFrame++) {
-        //     setTimeout(this.draw.bind(this), this._interval);
-        // }
+    animate(position: XYCoordinates) {
+        for (let i: number = 0; i < this._frameCount; i++) {
+            // this.setDelay(position, i);ˇ
+            setTimeout(this.draw.bind(this, position, i), i * 20);
+        }
     }
 
-    private draw() {
-        // this._ctx.save();
-        // this._ctx.translate(this._position.x, this._position.y);
-        // this._ctx.rotate(this._azimuth);
-        this._ctx.drawImage(this._img, this._currentFrame * this._frameWidth, 0, this._frameWidth, this._img.height, 0, 0, this._frameWidth, this._img.height);
-        // this._ctx.restore();
+    private setDelay(position: XYCoordinates, currentFrame: number) {
+        setTimeout(this.draw.bind(this, position, currentFrame), currentFrame * 20);
+    }
+
+    private draw(position: XYCoordinates, currentFrame: number) {
+        this._ctx.drawImage(this._img, currentFrame * this._frameWidth, 0, this._frameWidth, this._img.height, position.x - this._frameWidth/2, position.y - this._img.height/2, this._frameWidth, this._img.height);
     }
 }
