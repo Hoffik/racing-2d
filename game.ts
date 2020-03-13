@@ -37,6 +37,10 @@ class Race {
     private _track: Track;
     private _explosion: SpriteSheet;
 
+    private _supportTrack: Track;
+    private _supportCanvas: HTMLCanvasElement;
+    private _supportContext: CanvasRenderingContext2D;
+
     /**
      * Creates an instance of race.
      * @param [canvasID]        HTML5 canvas ID
@@ -54,42 +58,63 @@ class Race {
         this._interval = updateInterval;
         this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
         let carPosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
-        this._car = new Car(this, "img/car.png", "20px", "42px", carPosition);
-        this._track = new Track(this, "img/indianapolis.png", "11890px", "6050px", { x: -4900, y: -3880 });
-        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 50);
-        this.startRace();
+        this._car = new Car(this, "img/car.png", "20px", "42px", carPosition, Math.PI);
+        this._track = new Track(this._canvas, "img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
+        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 20);
+
+        // Support track layer for detecting colisions
+        let supportCanvas = document.getElementById("supportCanvas") as HTMLCanvasElement;
+        supportCanvas.width  = window.innerWidth;
+        supportCanvas.height = window.innerHeight;
+        this._supportCanvas = supportCanvas;
+        let supportContext = supportCanvas.getContext("2d");
+        this._supportContext = supportContext;
+        this._supportTrack = new Track(this._supportCanvas, "img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
+
+        //
+
+        this.start();
     }
 
     get canvas() {
         return this._canvas;
     }
+    get supportCanvas() {
+        return this._supportCanvas;
+    }
     get mousePosition() {
         return this._mousePosition;
     }
 
-    startRace() {
-        this._id = setInterval(this.updateCanvas.bind(this), this._interval);
+    start() {
+        this._id = setInterval(this.update.bind(this), this._interval);
     }
-    updateCanvas() {
+    update() {
         this.updatePositions();
-        // 1 calculateCollision - 1 draw track support layer, 2 read canvas
-        // 2 updateCanvas - 1 clearRect, 2 draw track visible layer, 3 draw car
-
-        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
-        this._track.draw();
-        this.readCanvas();
-        this._car.draw();
+        this.calculateCollisions();
+        this.updateCanvas();
     }
     updatePositions() {
         this._car.update();
         this._track.update(this._car);
+        this._supportTrack.update(this._car);
+    }
+    calculateCollisions() {
+        this._supportContext.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this._supportTrack.draw();
+        this.readCanvas();
+    }
+    updateCanvas() {
+        this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this._track.draw();
+        this._car.draw();
     }
     readCanvas() {
         let carFrontCoords: XYCoordinates = { x: this._car.position.x + this._car.halfSize.y * Math.cos(this._car.azimuth + Math.PI / 2), y: this._car.position.y + this._car.halfSize.y * Math.sin(this._car.azimuth + Math.PI / 2)};
         let carFrontLeftCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth) };
         let carFrontRightCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI) };
-        let leftImgData = this._context.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
-        let rightImgData = this._context.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
+        let leftImgData = this._supportContext.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
+        let rightImgData = this._supportContext.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
         if (leftImgData.data.toString() == "255,0,0,255") {
             clearInterval(this._id);
             this._explosion.animate(carFrontLeftCoords);
@@ -118,7 +143,7 @@ class Track {
     private _position: XYCoordinates;
     private _ctx: CanvasRenderingContext2D;
 
-    constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, startPosition: XYCoordinates = { x: 0, y: 0 }) {
+    constructor(canvas: HTMLCanvasElement, imageSource: string, imageWidth: string, imageHeight: string, startPosition: XYCoordinates = { x: 0, y: 0 }) {
         let img = document.createElement("IMG") as HTMLImageElement;
         this._img = img;
         this._img.setAttribute("src", imageSource);
@@ -131,7 +156,7 @@ class Track {
             y : startPosition.y
         };
 
-        this._ctx = race.canvas.getContext("2d");
+        this._ctx = canvas.getContext("2d");
         this._ctx.save();
     }
     
@@ -168,7 +193,7 @@ class Car {
      * @param [startPositionX] 
      * @param [startPositionY] 
      */
-    constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, startPosition: XYCoordinates) {
+    constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, startPosition: XYCoordinates, startAzimuth: number) {
         let img = document.createElement("IMG") as HTMLImageElement;
         this._img = img;
         this._img.setAttribute("src", imageSource);
@@ -180,7 +205,7 @@ class Car {
         this._mousePosition = race.mousePosition;
         this._position = startPosition;
         this._speed = { x: 0, y: 0 };
-        this._azimuth = 0;
+        this._azimuth = startAzimuth;
 
         this._ctx = race.canvas.getContext("2d");
         this._ctx.save();
@@ -249,13 +274,8 @@ class SpriteSheet {
 
     animate(position: XYCoordinates) {
         for (let i: number = 0; i < this._frameCount; i++) {
-            // this.setDelay(position, i);ˇ
-            setTimeout(this.draw.bind(this, position, i), i * 20);
+            setTimeout(this.draw.bind(this, position, i), i * this._interval);
         }
-    }
-
-    private setDelay(position: XYCoordinates, currentFrame: number) {
-        setTimeout(this.draw.bind(this, position, currentFrame), currentFrame * 20);
     }
 
     private draw(position: XYCoordinates, currentFrame: number) {
