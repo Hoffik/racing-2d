@@ -8,6 +8,9 @@ window.addEventListener('load', function() {
     window.addEventListener('resize', function() {
         race.setCanvasSize();
     });
+    window.addEventListener('click', function() {
+        race.start();
+    });
 });
 
 /**
@@ -58,9 +61,10 @@ class Race {
         this._interval = updateInterval;
         this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
         let carPosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
-        this._car = new Car(this, "img/car.png", "20px", "42px", carPosition, Math.PI);
+        let carAzimuth = 1.5 * Math.PI;
+        this._car = new Car(this, "img/car.png", "20px", "42px", carPosition, carAzimuth);
         this._track = new Track(this._canvas, "img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
-        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 20);
+        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 20);     
 
         // Support track layer for detecting colisions
         let supportCanvas = document.getElementById("supportCanvas") as HTMLCanvasElement;
@@ -72,8 +76,8 @@ class Race {
         this._supportTrack = new Track(this._supportCanvas, "img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
 
         //
-
-        this.start();
+        
+        this._id = setInterval(this.updateCanvas.bind(this), this._interval);
     }
 
     get canvas() {
@@ -87,6 +91,7 @@ class Race {
     }
 
     start() {
+        clearInterval(this._id);
         this._id = setInterval(this.update.bind(this), this._interval);
     }
     update() {
