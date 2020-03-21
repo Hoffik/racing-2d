@@ -35,6 +35,8 @@ class Race {
     private _boundingRectangle: DOMRect;
     private _id: number;
     private _interval: number;
+    private _currentCheckPoint: number;
+    private _maxCheckPoint: number;  
     private _mousePosition: XYCoordinates;
     private _car: Car;
     private _track: Track;
@@ -59,6 +61,8 @@ class Race {
         
         this._boundingRectangle = this._canvas.getBoundingClientRect();
         this._interval = updateInterval;
+        this._currentCheckPoint = 0;
+        this._maxCheckPoint = 3;
         this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
         let carPosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
         let carAzimuth = 1.5 * Math.PI;
@@ -94,6 +98,10 @@ class Race {
         clearInterval(this._id);
         this._id = setInterval(this.update.bind(this), this._interval);
     }
+    finnish() {
+        clearInterval(this._id);
+
+    }
     update() {
         this.updatePositions();
         this.calculateCollisions();
@@ -118,14 +126,32 @@ class Race {
         let carFrontCoords: XYCoordinates = { x: this._car.position.x + this._car.halfSize.y * Math.cos(this._car.azimuth + Math.PI / 2), y: this._car.position.y + this._car.halfSize.y * Math.sin(this._car.azimuth + Math.PI / 2)};
         let carFrontLeftCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth) };
         let carFrontRightCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI) };
-        let leftImgData = this._supportContext.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
-        let rightImgData = this._supportContext.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
-        if (leftImgData.data.toString() == "255,0,0,255") {
+        let leftCornerImgData = this._supportContext.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
+        let rightCornerImgData = this._supportContext.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
+        this.checkSurface(leftCornerImgData, rightCornerImgData);
+    }
+    checkSurface(leftCornerImgData: ImageData, rightCornerImgData: ImageData) {
+        if (leftCornerImgData.data.toString() == "0,0,0,255" && rightCornerImgData.data.toString() == "0,0,0,255") {    // black (asphalt)
+            this._car.acceleration = 0.015;
+            this._car.inertia = 0.5;
+        } else if (leftCornerImgData.data[0] == 255 || rightCornerImgData.data[0] == 255) { // red (object)
             clearInterval(this._id);
-            this._explosion.animate(carFrontLeftCoords);
-        } else if (rightImgData.data.toString() == "255,0,0,255") {
-            clearInterval(this._id);
-            this._explosion.animate(carFrontRightCoords);
+            this._explosion.animate(this._car.position);
+        } else if (leftCornerImgData.data[1] == 255 || rightCornerImgData.data[1] == 255) { // greeen (grass)
+            this._car.acceleration = 0.01;
+            this._car.inertia = 0;
+        } else if (leftCornerImgData.data[2] == 255) {  // blue (checkpoint)
+            this.checkPoint(leftCornerImgData);
+        } else if (rightCornerImgData.data[2] == 255) { // blue (checkpoint)
+            this.checkPoint(rightCornerImgData);
+        } 
+    }
+    checkPoint(cornerImgData: ImageData) {
+        if (cornerImgData.data[0] == this._currentCheckPoint) {
+            this._currentCheckPoint++;
+            if (this._currentCheckPoint == this._maxCheckPoint) {
+                this.finnish();
+            }
         }
     }
 
@@ -186,6 +212,8 @@ class Car {
     private _mousePosition: XYCoordinates;
     private _position: XYCoordinates;
     private _speed: XYCoordinates;
+    private _acceleration: number;
+    private _inertia: number;
     private _azimuth: number;
     private _ctx: CanvasRenderingContext2D;
 
@@ -210,6 +238,8 @@ class Car {
         this._mousePosition = race.mousePosition;
         this._position = startPosition;
         this._speed = { x: 0, y: 0 };
+        this._acceleration = 0.015;
+        this._inertia = 0.5;
         this._azimuth = startAzimuth;
 
         this._ctx = race.canvas.getContext("2d");
@@ -218,6 +248,12 @@ class Car {
 
     get speed() {
         return this._speed;
+    }
+    set acceleration(newAcceleration: number) {
+        this._acceleration = newAcceleration;
+    }
+    set inertia(newInertia: number) {
+        this._inertia = newInertia;
     }
     set position(newPosition: XYCoordinates) {
         this._position = newPosition;
@@ -237,8 +273,8 @@ class Car {
         this.newAzimuth();
     }
 	newSpeed() {
-		this._speed.x = ((this._mousePosition.x - this._position.x)/20 + this._speed.x)/2;
-		this._speed.y = ((this._mousePosition.y - this._position.y)/20 + this._speed.y)/2;
+		this._speed.x = (this._mousePosition.x - this._position.x)*this._acceleration + this._speed.x*this._inertia;
+		this._speed.y = (this._mousePosition.y - this._position.y)*this._acceleration + this._speed.y*this._inertia;
     }
     newAzimuth() {
         this._azimuth = Math.atan2(this._position.y - this._mousePosition.y, this._position.x - this._mousePosition.x) + Math.PI / 2;
