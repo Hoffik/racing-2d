@@ -102,7 +102,7 @@ class Race {
     }
     finnish() {
         clearInterval(this._id);
-
+        this._id = setInterval(this.updateCanvas.bind(this), this._interval);
     }
     update() {
         this.updatePositions();
@@ -138,7 +138,8 @@ class Race {
             this._car.acceleration = 0.015;
             this._car.inertia = 0.5;
         } else if (leftCornerImgData.data[0] == 255 || rightCornerImgData.data[0] == 255) { // red (object)
-            clearInterval(this._id);
+            // clearInterval(this._id);
+            this.finnish();
             this._explosion.animate(this._car.position, false);
             this._smoke.animate(this._car.position, true);
         } else if (leftCornerImgData.data[1] == 255 || rightCornerImgData.data[1] == 255) { // greeen (grass)
