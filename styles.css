@@ -4,6 +4,7 @@ html, body {
     margin: 0px;
 }
 
-canvas {
-    
+@font-face {
+    font-family:'digital-dream-regular';
+    src: url('static/font/digital-dream.regular.ttf');
 }

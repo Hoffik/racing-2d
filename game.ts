@@ -40,7 +40,9 @@ class Race {
     private _mousePosition: XYCoordinates;
     private _car: Car;
     private _track: Track;
+    private _stopWatch: StopWatch;
     private _explosion: SpriteSheet;
+    private _smoke: SpriteSheet;
 
     private _supportTrack: Track;
     private _supportCanvas: HTMLCanvasElement;
@@ -58,7 +60,7 @@ class Race {
         this._canvas = canvas;
         let context = canvas.getContext("2d");
         this._context = context;
-        
+
         this._boundingRectangle = this._canvas.getBoundingClientRect();
         this._interval = updateInterval;
         this._currentCheckPoint = 0;
@@ -68,7 +70,9 @@ class Race {
         let carAzimuth = 1.5 * Math.PI;
         this._car = new Car(this, "img/car.png", "20px", "42px", carPosition, carAzimuth);
         this._track = new Track(this._canvas, "img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
-        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1024px", "32px", 32, 20);     
+        this._stopWatch = new StopWatch("stopWatch");
+        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1600px", "64px", 64, 20);
+        this._smoke = new SpriteSheet(this, "img/animation/smoke.png", "1600px", "64px", 64, 20);
 
         // Support track layer for detecting colisions
         let supportCanvas = document.getElementById("supportCanvas") as HTMLCanvasElement;
@@ -78,8 +82,6 @@ class Race {
         let supportContext = supportCanvas.getContext("2d");
         this._supportContext = supportContext;
         this._supportTrack = new Track(this._supportCanvas, "img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
-
-        //
         
         this._id = setInterval(this.updateCanvas.bind(this), this._interval);
     }
@@ -106,6 +108,7 @@ class Race {
         this.updatePositions();
         this.calculateCollisions();
         this.updateCanvas();
+        this._stopWatch.update();
     }
     updatePositions() {
         this._car.update();
@@ -136,7 +139,8 @@ class Race {
             this._car.inertia = 0.5;
         } else if (leftCornerImgData.data[0] == 255 || rightCornerImgData.data[0] == 255) { // red (object)
             clearInterval(this._id);
-            this._explosion.animate(this._car.position);
+            this._explosion.animate(this._car.position, false);
+            this._smoke.animate(this._car.position, true);
         } else if (leftCornerImgData.data[1] == 255 || rightCornerImgData.data[1] == 255) { // greeen (grass)
             this._car.acceleration = 0.01;
             this._car.inertia = 0;
@@ -289,12 +293,45 @@ class Car {
     }
 }
 
+class StopWatch {
+    private _htmlText: HTMLHeadingElement;
+    private _minutes: number;
+    private _seconds: number;
+    private _milisecondes: number;
+
+    constructor(htmlTextID: string = "stopWatch") {
+        this._htmlText = document.getElementById(htmlTextID) as HTMLHeadingElement;
+        this._minutes = 0;
+        this._seconds = 0;
+        this._milisecondes = 0;
+    }
+
+    get minutes() {
+        return this._minutes;
+    }
+
+    update() {
+        this._milisecondes+=20;
+        if (this._milisecondes >= 1000) {
+            this._milisecondes = 0;
+            this._seconds++;
+            if (this._seconds >= 60) {
+                this._seconds = 0;
+                this._minutes++;
+            }
+        }
+        
+        this._htmlText.textContent = (this._minutes ? (this._minutes > 9 ? this._minutes : "0" + this._minutes) : "00") + ":" + (this._seconds ? (this._seconds > 9 ? this._seconds : "0" + this._seconds) : "00") + ":" + (this._milisecondes > 99 ? this._milisecondes : "0" + (this._milisecondes > 9 ? this._milisecondes : "0" + this._milisecondes));
+    }
+}
 
 class SpriteSheet {
     private _img: HTMLImageElement;
     private _frameWidth: number;
     private _frameCount: number;
+    private _currentFrame: number;
     private _interval: number;
+    private _setIntervalID: number;
     private _ctx: CanvasRenderingContext2D;
 
     constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, frameWidth: number, interval: number) {
@@ -307,19 +344,34 @@ class SpriteSheet {
 
         this._frameWidth = frameWidth;
         this._frameCount = parseInt(imageWidth) / parseInt(imageHeight);
+        this._currentFrame = 0;
         this._interval = interval;
 
         this._ctx = race.canvas.getContext("2d");
         this._ctx.save();
     }
 
-    animate(position: XYCoordinates) {
-        for (let i: number = 0; i < this._frameCount; i++) {
-            setTimeout(this.draw.bind(this, position, i), i * this._interval);
-        }
+    animate(position: XYCoordinates, repeat: boolean = false) {
+
+        this._setIntervalID = setInterval(this.draw.bind(this, position, repeat), this._interval);
+
     }
 
-    private draw(position: XYCoordinates, currentFrame: number) {
-        this._ctx.drawImage(this._img, currentFrame * this._frameWidth, 0, this._frameWidth, this._img.height, position.x - this._frameWidth/2, position.y - this._img.height/2, this._frameWidth, this._img.height);
+    // animateOnce(position: XYCoordinates) {
+    //     for (let i: number = 0; i < this._frameCount; i++) {
+    //         setTimeout(this.draw.bind(this, position, i), i * this._interval);
+    //     }
+    // }
+
+    private draw(position: XYCoordinates, repeat: boolean) {
+        this._ctx.drawImage(this._img, this._currentFrame * this._frameWidth, 0, this._frameWidth, this._img.height, position.x - this._frameWidth/2, position.y - this._img.height/2, this._frameWidth, this._img.height);
+        this._currentFrame++;
+        if (this._currentFrame == this._frameCount) {
+            if (repeat) {
+                this._currentFrame = 0;
+            } else {
+                clearInterval(this._setIntervalID);
+            }
+        } 
     }
 }
