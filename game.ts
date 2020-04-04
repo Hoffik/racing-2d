@@ -9,7 +9,9 @@ window.addEventListener('load', function() {
         race.setCanvasSize();
     });
     window.addEventListener('click', function() {
-        race.start();
+        race.end();
+        race = new Race();
+        // race.start();
     });
 });
 
@@ -44,9 +46,13 @@ class Race {
     private _explosion: SpriteSheet;
     private _smoke: SpriteSheet;
 
+    private _upperCanvas: HTMLCanvasElement;
+    private _upperContext: CanvasRenderingContext2D;
+    private _trafficLight: SpriteSheet;
+    
+    private _lowerCanvas: HTMLCanvasElement;
+    private _lowerContext: CanvasRenderingContext2D;
     private _supportTrack: Track;
-    private _supportCanvas: HTMLCanvasElement;
-    private _supportContext: CanvasRenderingContext2D;
 
     /**
      * Creates an instance of race.
@@ -58,39 +64,45 @@ class Race {
         canvas.width  = window.innerWidth;
         canvas.height = window.innerHeight;
         this._canvas = canvas;
-        let context = canvas.getContext("2d");
-        this._context = context;
+        this._context = canvas.getContext("2d");
 
         this._boundingRectangle = this._canvas.getBoundingClientRect();
         this._interval = updateInterval;
         this._currentCheckPoint = 0;
         this._maxCheckPoint = 3;
         this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
-        let carPosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
-        let carAzimuth = 1.5 * Math.PI;
-        this._car = new Car(this, "img/car.png", "20px", "42px", carPosition, carAzimuth);
+        this._car = new Car(this, "img/car.png", "20px", "42px", { x: this._canvas.width / 2, y: this._canvas.height / 2}, 1.5 * Math.PI);
         this._track = new Track(this._canvas, "img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
         this._stopWatch = new StopWatch("stopWatch");
-        this._explosion = new SpriteSheet(this, "img/animation/explosion.png", "1600px", "64px", 64, 20);
-        this._smoke = new SpriteSheet(this, "img/animation/smoke.png", "1600px", "64px", 64, 20);
 
+        //Animations
+        let upperCanvas = document.getElementById("lowerLayer") as HTMLCanvasElement;
+        upperCanvas.width  = window.innerWidth;
+        upperCanvas.height = window.innerHeight;
+        this._upperCanvas = upperCanvas;
+        this._upperContext = upperCanvas.getContext("2d");
+        this._trafficLight = new SpriteSheet(this._upperCanvas, "img/animation/traffic-light.png", "162px", "127px", 54, 1000);
+        this._explosion = new SpriteSheet(this._canvas, "img/animation/explosion.png", "1600px", "64px", 64, updateInterval);
+        this._smoke = new SpriteSheet(this._canvas, "img/animation/smoke.png", "1600px", "64px", 64, updateInterval);
+        
         // Support track layer for detecting colisions
-        let supportCanvas = document.getElementById("supportCanvas") as HTMLCanvasElement;
-        supportCanvas.width  = window.innerWidth;
-        supportCanvas.height = window.innerHeight;
-        this._supportCanvas = supportCanvas;
-        let supportContext = supportCanvas.getContext("2d");
-        this._supportContext = supportContext;
-        this._supportTrack = new Track(this._supportCanvas, "img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
+        let lowerCanvas = document.getElementById("lowerLayer") as HTMLCanvasElement;
+        lowerCanvas.width  = window.innerWidth;
+        lowerCanvas.height = window.innerHeight;
+        this._lowerCanvas = lowerCanvas;
+        this._lowerContext = lowerCanvas.getContext("2d");
+        this._supportTrack = new Track(this._lowerCanvas, "img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
         
         this._id = setInterval(this.updateCanvas.bind(this), this._interval);
+        this._trafficLight.animate({ x:  this._canvas.width / 2 -27, y: 100 });
+        setTimeout(this.start.bind(this), 3000);
     }
 
     get canvas() {
         return this._canvas;
     }
     get supportCanvas() {
-        return this._supportCanvas;
+        return this._lowerCanvas;
     }
     get mousePosition() {
         return this._mousePosition;
@@ -100,9 +112,13 @@ class Race {
         clearInterval(this._id);
         this._id = setInterval(this.update.bind(this), this._interval);
     }
-    finnish() {
+    stop() {
         clearInterval(this._id);
         this._id = setInterval(this.updateCanvas.bind(this), this._interval);
+    }
+    end() {
+        clearInterval(this._id);
+        this._smoke.endAnimation();
     }
     update() {
         this.updatePositions();
@@ -116,7 +132,7 @@ class Race {
         this._supportTrack.update(this._car);
     }
     calculateCollisions() {
-        this._supportContext.clearRect(0, 0, this._canvas.width, this._canvas.height);
+        this._lowerContext.clearRect(0, 0, this._canvas.width, this._canvas.height);
         this._supportTrack.draw();
         this.readCanvas();
     }
@@ -129,8 +145,8 @@ class Race {
         let carFrontCoords: XYCoordinates = { x: this._car.position.x + this._car.halfSize.y * Math.cos(this._car.azimuth + Math.PI / 2), y: this._car.position.y + this._car.halfSize.y * Math.sin(this._car.azimuth + Math.PI / 2)};
         let carFrontLeftCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth) };
         let carFrontRightCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI) };
-        let leftCornerImgData = this._supportContext.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
-        let rightCornerImgData = this._supportContext.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
+        let leftCornerImgData = this._lowerContext.getImageData(carFrontLeftCoords.x, carFrontLeftCoords.y, 1, 1);
+        let rightCornerImgData = this._lowerContext.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
         this.checkSurface(leftCornerImgData, rightCornerImgData);
     }
     checkSurface(leftCornerImgData: ImageData, rightCornerImgData: ImageData) {
@@ -139,7 +155,7 @@ class Race {
             this._car.inertia = 0.5;
         } else if (leftCornerImgData.data[0] == 255 || rightCornerImgData.data[0] == 255) { // red (object)
             // clearInterval(this._id);
-            this.finnish();
+            this.stop();
             this._explosion.animate(this._car.position, false);
             this._smoke.animate(this._car.position, true);
         } else if (leftCornerImgData.data[1] == 255 || rightCornerImgData.data[1] == 255) { // greeen (grass)
@@ -155,7 +171,7 @@ class Race {
         if (cornerImgData.data[0] == this._currentCheckPoint) {
             this._currentCheckPoint++;
             if (this._currentCheckPoint == this._maxCheckPoint) {
-                this.finnish();
+                this.stop();
             }
         }
     }
@@ -332,10 +348,10 @@ class SpriteSheet {
     private _frameCount: number;
     private _currentFrame: number;
     private _interval: number;
-    private _setIntervalID: number;
+    private _intervalID: number;
     private _ctx: CanvasRenderingContext2D;
 
-    constructor(race: Race, imageSource: string, imageWidth: string, imageHeight: string, frameWidth: number, interval: number) {
+    constructor(canvas: HTMLCanvasElement, imageSource: string, imageWidth: string, imageHeight: string, frameWidth: number, interval: number) {
         let img = document.createElement("IMG") as HTMLImageElement;
         this._img = img;
         this._img.setAttribute("src", imageSource);
@@ -348,21 +364,17 @@ class SpriteSheet {
         this._currentFrame = 0;
         this._interval = interval;
 
-        this._ctx = race.canvas.getContext("2d");
+        this._ctx = canvas.getContext("2d");
         this._ctx.save();
     }
 
     animate(position: XYCoordinates, repeat: boolean = false) {
-
-        this._setIntervalID = setInterval(this.draw.bind(this, position, repeat), this._interval);
-
+        this._intervalID = setInterval(this.draw.bind(this, position, repeat), this._interval);
     }
 
-    // animateOnce(position: XYCoordinates) {
-    //     for (let i: number = 0; i < this._frameCount; i++) {
-    //         setTimeout(this.draw.bind(this, position, i), i * this._interval);
-    //     }
-    // }
+    endAnimation() {
+        clearInterval(this._intervalID);
+    }
 
     private draw(position: XYCoordinates, repeat: boolean) {
         this._ctx.drawImage(this._img, this._currentFrame * this._frameWidth, 0, this._frameWidth, this._img.height, position.x - this._frameWidth/2, position.y - this._img.height/2, this._frameWidth, this._img.height);
@@ -371,7 +383,7 @@ class SpriteSheet {
             if (repeat) {
                 this._currentFrame = 0;
             } else {
-                clearInterval(this._setIntervalID);
+                clearInterval(this._intervalID);
             }
         } 
     }
