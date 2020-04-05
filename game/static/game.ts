@@ -71,8 +71,8 @@ class Race {
         this._currentCheckPoint = 0;
         this._maxCheckPoint = 3;
         this._mousePosition = { x: this._canvas.width / 2, y: this._canvas.height / 2};
-        this._car = new Car(this, "img/car.png", "20px", "42px", { x: this._canvas.width / 2, y: this._canvas.height / 2}, 1.5 * Math.PI);
-        this._track = new Track(this._canvas, "img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
+        this._car = new Car(this, "/static/img/car.png", "20px", "42px", { x: this._canvas.width / 2, y: this._canvas.height / 2}, 1.5 * Math.PI);
+        this._track = new Track(this._canvas, "/static/img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
         this._stopWatch = new StopWatch("stopWatch");
 
         //Animations
@@ -81,9 +81,9 @@ class Race {
         upperCanvas.height = window.innerHeight;
         this._upperCanvas = upperCanvas;
         this._upperContext = upperCanvas.getContext("2d");
-        this._trafficLight = new SpriteSheet(this._upperCanvas, "img/animation/traffic-light.png", "162px", "127px", 54, 1000);
-        this._explosion = new SpriteSheet(this._canvas, "img/animation/explosion.png", "1600px", "64px", 64, updateInterval);
-        this._smoke = new SpriteSheet(this._canvas, "img/animation/smoke.png", "1600px", "64px", 64, updateInterval);
+        this._trafficLight = new SpriteSheet(this._upperCanvas, "/static/img/animation/traffic-light.png", "162px", "127px", 54, 1000);
+        this._explosion = new SpriteSheet(this._canvas, "/static/img/animation/explosion.png", "1600px", "64px", 64, updateInterval);
+        this._smoke = new SpriteSheet(this._canvas, "/static/img/animation/smoke.png", "1600px", "64px", 64, updateInterval);
         
         // Support track layer for detecting colisions
         let lowerCanvas = document.getElementById("lowerLayer") as HTMLCanvasElement;
@@ -91,7 +91,7 @@ class Race {
         lowerCanvas.height = window.innerHeight;
         this._lowerCanvas = lowerCanvas;
         this._lowerContext = lowerCanvas.getContext("2d");
-        this._supportTrack = new Track(this._lowerCanvas, "img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
+        this._supportTrack = new Track(this._lowerCanvas, "/static/img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
         
         this._id = setInterval(this.updateCanvas.bind(this), this._interval);
         this._trafficLight.animate({ x:  this._canvas.width / 2 -27, y: 100 });

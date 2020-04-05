@@ -1,6 +1,9 @@
-js/
-temp/
 *.pyc
 *.json
 *.sqlite3
 *.env
+*.code-workspace
+*.js
+*.js.map
+temp/
+game/media/
