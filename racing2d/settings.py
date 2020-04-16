@@ -40,6 +40,7 @@ ALLOWED_HOSTS = ['racing2d.herokuapp.com', '127.0.0.1']
 
 INSTALLED_APPS = [
     'game.apps.GameConfig',
+    'rest_framework',
 
     'django.contrib.admin',
     'django.contrib.auth',
@@ -83,6 +84,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'racing2d.wsgi.application'
 
 
+# Django REST Framework
+# https://www.django-rest-framework.org
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}
+
+
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
@@ -92,6 +105,13 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
+
+
+# Custom user authentication
+# https://docs.djangoproject.com/en/2.1/topics/auth/customizing/#substituting-a-custom-user-model
+
+AUTH_USER_MODEL = 'game.User'
+LOGIN_REDIRECT_URL = 'game:race'
 
 
 # Password validation
