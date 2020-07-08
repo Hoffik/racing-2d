@@ -49,8 +49,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'graphene_django',
     'storages',
 ]
+
+GRAPHENE = {
+    "SCHEMA": "racing2d.schema.schema",
+    # "SCHEMA_INDENT": 4,
+    # "MIDDLEWARE": ("graphene_django.debug.DjangoDebugMiddleware",),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
