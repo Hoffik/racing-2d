@@ -9,9 +9,10 @@ window.addEventListener('load', function() {
         race.setCanvasSize();
     });
     window.addEventListener('click', function() {
-        race.end();
-        race = new Race();
-        // race.start();
+        // race.end();
+        // race = new Race();
+
+        race.testFetch();
     });
 });
 
@@ -75,6 +76,23 @@ class Race {
         this._track = new Track(this._canvas, "/static/img/track.jpg", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
         this._stopWatch = new StopWatch("stopWatch");
 
+        //GraphQL test
+        const query = `
+            query {
+                allUsers { id }
+            }
+        `;
+        const url = "http://127.0.0.1:8080/graphql";
+        const opts = {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query })
+        };
+        fetch(url, opts)
+            .then(res => res.json())
+            .then(console.log)
+            .catch(console.error);
+
         //Animations
         let upperCanvas = document.getElementById("lowerLayer") as HTMLCanvasElement;
         upperCanvas.width  = window.innerWidth;
@@ -93,7 +111,7 @@ class Race {
         this._lowerContext = lowerCanvas.getContext("2d");
         this._supportTrack = new Track(this._lowerCanvas, "/static/img/track.png", "1024px", "768px", { x:  this._canvas.width / 2 -285, y: this._canvas.height / 2 -185 });
         
-        this._id = setInterval(this.updateCanvas.bind(this), this._interval);
+        this._id = window.setInterval(this.updateCanvas.bind(this), this._interval);
         this._trafficLight.animate({ x:  this._canvas.width / 2 -27, y: 100 });
         setTimeout(this.start.bind(this), 3000);
     }
@@ -108,13 +126,34 @@ class Race {
         return this._mousePosition;
     }
 
+    testFetch() {
+        let query = `
+            query {
+                allUsers {
+                    id
+                    username
+                }
+            }
+        `;
+        let url = "http://127.0.0.1:8080/graphql";
+        let opts = {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query })
+        };
+        fetch(url, opts)
+            .then(res => res.json())
+            .then(console.log)
+            .catch(console.error);
+    }
+
     start() {
         clearInterval(this._id);
-        this._id = setInterval(this.update.bind(this), this._interval);
+        this._id = window.setInterval(this.update.bind(this), this._interval);
     }
     stop() {
         clearInterval(this._id);
-        this._id = setInterval(this.updateCanvas.bind(this), this._interval);
+        this._id = window.setInterval(this.updateCanvas.bind(this), this._interval);
     }
     end() {
         clearInterval(this._id);
@@ -369,7 +408,7 @@ class SpriteSheet {
     }
 
     animate(position: XYCoordinates, repeat: boolean = false) {
-        this._intervalID = setInterval(this.draw.bind(this, position, repeat), this._interval);
+        this._intervalID = window.setInterval(this.draw.bind(this, position, repeat), this._interval);
     }
 
     endAnimation() {

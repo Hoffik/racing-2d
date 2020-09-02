@@ -2,7 +2,7 @@ from django.urls import include, path
 
 from rest_framework import routers
 
-from .views import Game
+from .views import Game, Test
 from .views import UserViewSet, RaceViewSet, CarViewSet, TerrainViewSet, TrackViewSet, ResultViewSet
 
 app_name = 'game'
@@ -10,6 +10,7 @@ app_name = 'game'
 # App urls
 app_urls = [
     path('', Game.as_view(), name='race'),
+    path('test/', Test.as_view(), name='test'),
 ]
 
 # REST API urls

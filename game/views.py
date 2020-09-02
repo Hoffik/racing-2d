@@ -11,6 +11,8 @@ from .serializers import UserSerializer, RaceSerializer, CarSerializer, TerrainS
 class Game(TemplateView):
     template_name = "race.html"
 
+class Test(TemplateView):
+    template_name = "base.html"
 
 # Rest API views
 class UserViewSet(viewsets.ModelViewSet):
