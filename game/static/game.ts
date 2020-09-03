@@ -9,10 +9,10 @@ window.addEventListener('load', function() {
         race.setCanvasSize();
     });
     window.addEventListener('click', function() {
-        // race.end();
-        // race = new Race();
+        race.end();
+        race = new Race();
 
-        race.testFetch();
+        // race.testFetch();
     });
 });
 
@@ -147,11 +147,11 @@ class Race {
             .catch(console.error);
     }
 
-    start() {
+    private start() {
         clearInterval(this._id);
         this._id = window.setInterval(this.update.bind(this), this._interval);
     }
-    stop() {
+    private stop() {
         clearInterval(this._id);
         this._id = window.setInterval(this.updateCanvas.bind(this), this._interval);
     }
@@ -159,28 +159,28 @@ class Race {
         clearInterval(this._id);
         this._smoke.endAnimation();
     }
-    update() {
+    private update() {
         this.updatePositions();
         this.calculateCollisions();
         this.updateCanvas();
         this._stopWatch.update();
     }
-    updatePositions() {
+    private updatePositions() {
         this._car.update();
         this._track.update(this._car);
         this._supportTrack.update(this._car);
     }
-    calculateCollisions() {
+    private calculateCollisions() {
         this._lowerContext.clearRect(0, 0, this._canvas.width, this._canvas.height);
         this._supportTrack.draw();
         this.readCanvas();
     }
-    updateCanvas() {
+    private updateCanvas() {
         this._context.clearRect(0, 0, this._canvas.width, this._canvas.height);
         this._track.draw();
         this._car.draw();
     }
-    readCanvas() {
+    private readCanvas() {
         let carFrontCoords: XYCoordinates = { x: this._car.position.x + this._car.halfSize.y * Math.cos(this._car.azimuth + Math.PI / 2), y: this._car.position.y + this._car.halfSize.y * Math.sin(this._car.azimuth + Math.PI / 2)};
         let carFrontLeftCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth) };
         let carFrontRightCoords: XYCoordinates = { x: carFrontCoords.x + this._car.halfSize.x * Math.cos(this._car.azimuth + Math.PI), y: carFrontCoords.y + this._car.halfSize.x * Math.sin(this._car.azimuth + Math.PI) };
@@ -188,7 +188,7 @@ class Race {
         let rightCornerImgData = this._lowerContext.getImageData(carFrontRightCoords.x, carFrontRightCoords.y, 1, 1);
         this.checkSurface(leftCornerImgData, rightCornerImgData);
     }
-    checkSurface(leftCornerImgData: ImageData, rightCornerImgData: ImageData) {
+    private checkSurface(leftCornerImgData: ImageData, rightCornerImgData: ImageData) {
         if (leftCornerImgData.data.toString() == "0,0,0,255" && rightCornerImgData.data.toString() == "0,0,0,255") {    // black (asphalt)
             this._car.acceleration = 0.015;
             this._car.inertia = 0.5;
@@ -206,7 +206,7 @@ class Race {
             this.checkPoint(rightCornerImgData);
         } 
     }
-    checkPoint(cornerImgData: ImageData) {
+    private checkPoint(cornerImgData: ImageData) {
         if (cornerImgData.data[0] == this._currentCheckPoint) {
             this._currentCheckPoint++;
             if (this._currentCheckPoint == this._maxCheckPoint) {
@@ -332,11 +332,11 @@ class Car {
         this.newSpeed();
         this.newAzimuth();
     }
-	newSpeed() {
+	private newSpeed() {
 		this._speed.x = (this._mousePosition.x - this._position.x)*this._acceleration + this._speed.x*this._inertia;
 		this._speed.y = (this._mousePosition.y - this._position.y)*this._acceleration + this._speed.y*this._inertia;
     }
-    newAzimuth() {
+    private newAzimuth() {
         this._azimuth = Math.atan2(this._position.y - this._mousePosition.y, this._position.x - this._mousePosition.x) + Math.PI / 2;
     }
 
